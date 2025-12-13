@@ -6,24 +6,20 @@ import joblib
 import os
 
 # --- Global Constants ---
-# NOTE: These values are hardcoded as they were defined in Colab
 USER = "Amir Hussain" 
 LMS_NAME = "Virtual Learning Portal"
 REQUIRED_ATTENDANCE = 0.75
 ALERT_WINDOW_DAYS = 7
-# Set today's date for relative calculations
 today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) 
 
 # --- 1. ML Prediction Logic ---
 def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
     MODEL_FILE = 'performance_predictor.pkl'
     try:
-        # Load the model from the file uploaded to GitHub
         loaded_model = joblib.load(MODEL_FILE)
     except FileNotFoundError:
         return "N/A", "Model file not found. Please ensure performance_predictor.pkl is uploaded."
     
-    # Prepare input data for prediction
     df_current = pd.DataFrame({
         'Attendance_Pct': [attendance_pct],  
         'Quiz_Avg': [quiz_avg],        
@@ -54,15 +50,12 @@ def app():
 
     # --- 2. Stable Data Loading from CSV Files ---
     try:
-        # Load the data files uploaded to GitHub
         df_attendance = pd.read_csv('attendance_data.csv')
         df_assignments = pd.read_csv('assignments_data.csv')
         df_assignments['Due_Date'] = pd.to_datetime(df_assignments['Due_Date'])
         
-        # Load the input data for ML prediction
         df_risk_input = pd.read_csv('student_risk_data.csv')
 
-        # Run ML prediction using loaded risk data
         RISK_PREDICTION, RISK_DETAIL = get_ml_risk(
             attendance_pct=df_risk_input['Attendance_Pct'][0], 
             quiz_avg=df_risk_input['Quiz_Avg'][0], 
@@ -135,7 +128,8 @@ def app():
     if not shortfall_alerts.empty:
         st.error(f"🔴 ACTION REQUIRED! {len(shortfall_alerts)} course(s) are below the {int(REQUIRED_ATTENDANCE*100)}% attendance threshold.")
         display_cols = ['Course_Code', 'Attended', 'Total_Classes', 'Attendance_Pct_Display', 'Classes_Needed']
-        shortfall_alerts_display = shortfall_alerts[display_cols].rename(columns={'Course_Code': 'Course','Attended': 'Attandence','Total_Classes': 'Total classes','Attendance_Pct_Display': 'Percentage','Classes_Needed': 'Required Classes'})
+        # Columns changed to English based on user request
+        shortfall_alerts_display = shortfall_alerts[display_cols].rename(columns={'Course_Code': 'Course','Attended': 'Attandence','Total_Classes': 'Total Classes','Attendance_Pct_Display': 'Percentage','Classes_Needed': 'Required Classes'})
         st.dataframe(shortfall_alerts_display, hide_index=True, use_container_width=True)
     else:
         st.success("✅ Good News! Your attendance is SAFE in all courses.")
@@ -147,6 +141,7 @@ def app():
     if not reminder_alerts.empty:
         st.warning(f"🔔 {len(reminder_alerts)} item(s) are due in the next 7 days or are overdue.")
         reminder_display = reminder_alerts[['Course_Code', 'Item_Title', 'Due_Date', 'Days_Remaining', 'Alert_Category']].copy()
+        
         def format_days(days):
             if days < 0:
                 return f"{abs(days)} دن پہلے (Overdue)"
@@ -154,16 +149,16 @@ def app():
                 return "آج (URGENT)"
             else:
                 return f"{days} Remaining Days"
-      
-reminder_display['Days Remaining'] = reminder_display['Days_Remaining'].apply(format_days)
-st.dataframe(reminder_display.rename(columns={'Course_Code': 'Course','Item_Title': 'Title','Due_Date': 'Due Date','Alert_Category': 'Status',})[['Course', 'Title', 'Due Date', 'Days Remaining', 'Status']], hide_index=True, use_container_width=True)
+                
+        # Assignment table display logic (FIXED INDENTATION AND LOGIC)
+        reminder_display['Days Remaining'] = reminder_display['Days_Remaining'].apply(format_days)
+        st.dataframe(reminder_display.rename(columns={'Course_Code': 'Course','Item_Title': 'Title','Due_Date': 'Due Date','Alert_Category': 'Status',})[['Course', 'Title', 'Due Date', 'Days Remaining', 'Status']], hide_index=True, use_container_width=True)
 
-    
+    else: # <-- This else block is correctly aligned with 'if not reminder_alerts.empty:'
         st.info("🟢 Zero pending items in the immediate future.")
-    st.write("---")
+        
+    st.write("---") # <-- This is correctly outside the if/else block
     
 
 if __name__ == "__main__":
     app()
-
-
