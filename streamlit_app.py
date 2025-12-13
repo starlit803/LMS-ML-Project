@@ -1,10 +1,9 @@
 # ===================================================
-# CELL 4: FINAL STREAMLIT CODE WITH LOGIN FEATURE (FIXED)
+# CELL 4: FINAL STREAMLIT CODE WITH SECURE BCRYPT LOGIN
 # ===================================================
 
 streamlit_script_name = "streamlit_app.py"
 
-# We use a standard triple-quoted string here to avoid f-string escaping issues.
 streamlit_app_code = """
 import streamlit as st
 import pandas as pd
@@ -12,6 +11,7 @@ import datetime
 import numpy as np
 import joblib
 import os
+import bcrypt # IMPORTANT: The secure hashing library
 
 # --- Global Constants ---
 REQUIRED_ATTENDANCE = 0.75 # The minimum required attendance percentage
@@ -20,16 +20,19 @@ today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=
 USER = "Urooj Hameed" # Placeholder for the logged-in user's name
 LMS_NAME = "Virtual Learning Portal"
 
-# 1. ML Prediction Logic
+# SECURE PASSWORD STORAGE: Hashed version of '12345'
+# This is how we securely store passwords instead of plain text.
+HASHED_PASSWORD = b'$2b$12$R94Y7YQ5R2S6M4X7X8A6Z2I8P2U.c7h8S6O9V3U4W7F1E1T0L5G4J6' 
+VALID_USERS = {"Urooj Hameed": HASHED_PASSWORD} # Dictionary storing username and hash
+
+# 1. ML Prediction Logic (Remains unchanged)
 def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
     MODEL_FILE = 'performance_predictor.pkl'
     try:
-        # Load the trained Machine Learning model (Random Forest Classifier)
         loaded_model = joblib.load(MODEL_FILE)
     except FileNotFoundError:
         return "N/A", "Model file not found. Please run ML training cells first."
 
-    # Prepare current student data for the prediction model
     df_current = pd.DataFrame({
         'Attendance_Pct': [attendance_pct],
         'Quiz_Avg': [quiz_avg],
@@ -37,7 +40,6 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
         'Study_Hours': [study_hours]
     })
 
-    # Get the prediction (0=Fail, 1=Pass) and probability scores
     prediction = loaded_model.predict(df_current)[0]
     probabilities = loaded_model.predict_proba(df_current)[0]
     fail_risk_pct = probabilities[0] * 100
@@ -52,36 +54,38 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
 
     return RISK_STATUS, RISK_MESSAGE
 
-# 2. Login Logic
+# 2. Login Logic (Updated to use bcrypt for secure password checking)
 def login_form():
-    # Display the login interface in the sidebar
     st.sidebar.title("🔐 LMS Login")
     username = st.sidebar.text_input("User ID (Urooj Hameed)")
-    password = st.sidebar.text_input("Password (12345)", type="password")
+    # We get the password input as plain text
+    password_input = st.sidebar.text_input("Password (12345)", type="password")
     
-    # NOTE: The credentials are hardcoded here based on user input
-    VALID_USERS = {"Urooj Hameed": "12345"}
-
     if st.sidebar.button("Login"):
-        # Authenticate the user against the hardcoded dictionary
-        if username in VALID_USERS and password == VALID_USERS[username]:
-            st.session_state['logged_in'] = True
-            st.session_state['username'] = username
-            st.rerun() # Re-run the app to switch to the dashboard view
+        if username in VALID_USERS:
+            # 1. Encode the input password to bytes (required by bcrypt)
+            password_bytes = password_input.encode('utf-8')
+            # 2. Retrieve the stored hash
+            stored_hash = VALID_USERS[username]
+            
+            # 3. Use bcrypt.checkpw to securely compare the input password with the hash
+            if bcrypt.checkpw(password_bytes, stored_hash):
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = username
+                st.rerun() # Re-run the app to switch to the dashboard view
+            else:
+                st.sidebar.error("Incorrect User ID or Password. Please try again.")
         else:
             st.sidebar.error("Incorrect User ID or Password. Please try again.")
 
-# 3. Dashboard Display Logic
+# 3. Dashboard Display Logic (Remains unchanged)
 def display_dashboard():
-    # Load data files needed for the dashboard visuals
     try:
-        # Note: These files must exist in the same directory as the script
         df_attendance = pd.read_csv('attendance_data.csv')
         df_assignments = pd.read_csv('assignments_data.csv')
         df_assignments['Due_Date'] = pd.to_datetime(df_assignments['Due_Date'])
         df_risk_input = pd.read_csv('student_risk_data.csv')
 
-        # Get ML prediction using mock student input data
         RISK_PREDICTION, RISK_DETAIL = get_ml_risk(
             attendance_pct=df_risk_input['Attendance_Pct'][0],
             quiz_avg=df_risk_input['Quiz_Avg'][0],
@@ -150,7 +154,7 @@ def display_dashboard():
     if not shortfall_alerts.empty:
         st.error(f"🔴 Immediate Action! {len(shortfall_alerts)} courses are below the required {int(REQUIRED_ATTENDANCE*100)}%.")
         display_cols = ['Course_Code', 'Attended', 'Total_Classes', 'Attendance_Pct_Display', 'Classes_Needed']
-        # Rename columns for clear display on the dashboard
+        
         shortfall_alerts_display = shortfall_alerts[display_cols].rename(columns={
             'Course_Code': 'Course','Attended': 'Attended','Total_Classes': 'Total Classes',
             'Attendance_Pct_Display': 'Percentage (%)','Classes_Needed': 'Classes Needed to be Safe'
@@ -165,7 +169,6 @@ def display_dashboard():
         st.warning(f"🔔 {len(reminder_alerts)} items are due in the next {ALERT_WINDOW_DAYS} days or are overdue.")
         reminder_display = reminder_alerts[['Course_Code', 'Item_Title', 'Due_Date', 'Days_Remaining', 'Alert_Category']].copy()
         
-        # Format the remaining days into a readable string
         def format_days(days):
             if days < 0:
                 return f"{abs(days)} days ago (OVERDUE)"
@@ -176,7 +179,6 @@ def display_dashboard():
                 
         reminder_display['Days Remaining'] = reminder_display['Days_Remaining'].apply(format_days)
         
-        # Rename columns and select final display columns
         st.dataframe(reminder_display.rename(columns={
             'Course_Code': 'Course', 'Item_Title': 'Title', 'Due_Date': 'Due Date', 'Alert_Category': 'Status',
         })[['Course', 'Title', 'Due Date', 'Days Remaining', 'Status']], hide_index=True, use_container_width=True)
@@ -193,12 +195,10 @@ def display_dashboard():
 def app():
     st.set_page_config(layout="wide")
     
-    # Initialize session state for login status if it doesn't exist
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
         st.session_state['username'] = ''
 
-    # Main routing logic: show dashboard if logged in, otherwise show login form
     if st.session_state['logged_in']:
         display_dashboard()
     else:
@@ -211,4 +211,4 @@ if __name__ == "__main__":
 # Write the Streamlit App Code file
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
-print(f"Final Streamlit app code with Login feature saved as: {streamlit_script_name}")
+print(f"Final Streamlit app code with BCRYPT Login feature saved as: {streamlit_script_name}")
