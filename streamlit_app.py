@@ -158,11 +158,12 @@ def app():
 reminder_display['Days Remaining'] = reminder_display['Days_Remaining'].apply(format_days)
 st.dataframe(reminder_display.rename(columns={'Course_Code': 'Course','Item_Title': 'Title','Due_Date': 'Due Date','Alert_Category': 'Status',})[['Course', 'Title', 'Due Date', 'Days Remaining', 'Status']], hide_index=True, use_container_width=True)
 
-    else:
+    
         st.info("🟢 Zero pending items in the immediate future.")
     st.write("---")
     
 
 if __name__ == "__main__":
     app()
+
 
