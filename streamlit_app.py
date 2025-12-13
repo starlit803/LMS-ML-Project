@@ -1,16 +1,11 @@
 # ===================================================
-# CELL 4: FINAL STREAMLIT CODE WITH LOGIN FEATURE
+# CELL 4: FINAL STREAMLIT CODE WITH LOGIN FEATURE (FIXED)
 # ===================================================
 
 streamlit_script_name = "streamlit_app.py"
 
-# --- Define Login Credentials ---
-VALID_USERS = {
-    "Urooj Hameed": "12345" # Defined by the user
-}
-# --------------------------------
-
-streamlit_app_code = f"""
+# We use a standard triple-quoted string here to avoid f-string escaping issues.
+streamlit_app_code = """
 import streamlit as st
 import pandas as pd
 import datetime
@@ -35,12 +30,12 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
         return "N/A", "Model file not found. Please run ML training cells first."
 
     # Prepare current student data for the prediction model
-    df_current = pd.DataFrame({{
+    df_current = pd.DataFrame({
         'Attendance_Pct': [attendance_pct],
         'Quiz_Avg': [quiz_avg],
         'Assignment_Avg': [assignment_avg],
         'Study_Hours': [study_hours]
-    }})
+    })
 
     # Get the prediction (0=Fail, 1=Pass) and probability scores
     prediction = loaded_model.predict(df_current)[0]
@@ -50,10 +45,10 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
 
     if prediction == 1:
         RISK_STATUS = "✅ LOW RISK (Projected PASS)"
-        RISK_MESSAGE = f"The likelihood of you passing is {{pass_chance_pct:.1f}}%."
+        RISK_MESSAGE = f"The likelihood of you passing is {pass_chance_pct:.1f}%."
     else:
         RISK_STATUS = "🔴 HIGH RISK (Projected FAIL)"
-        RISK_MESSAGE = f"🚨 Danger! The likelihood of you failing is {{fail_risk_pct:.1f}}%. Immediate action is required!"
+        RISK_MESSAGE = f"🚨 Danger! The likelihood of you failing is {fail_risk_pct:.1f}%. Immediate action is required!"
 
     return RISK_STATUS, RISK_MESSAGE
 
@@ -65,7 +60,7 @@ def login_form():
     password = st.sidebar.text_input("Password (12345)", type="password")
     
     # NOTE: The credentials are hardcoded here based on user input
-    VALID_USERS = {{"Urooj Hameed": "12345"}}
+    VALID_USERS = {"Urooj Hameed": "12345"}
 
     if st.sidebar.button("Login"):
         # Authenticate the user against the hardcoded dictionary
@@ -80,6 +75,7 @@ def login_form():
 def display_dashboard():
     # Load data files needed for the dashboard visuals
     try:
+        # Note: These files must exist in the same directory as the script
         df_attendance = pd.read_csv('attendance_data.csv')
         df_assignments = pd.read_csv('assignments_data.csv')
         df_assignments['Due_Date'] = pd.to_datetime(df_assignments['Due_Date'])
@@ -94,12 +90,12 @@ def display_dashboard():
         )
 
     except Exception as exc:
-        st.error(f"⚠️ Data Loading or ML Error: {{exc}}")
+        st.error(f"⚠️ Data Loading or ML Error: {exc}")
         st.stop()
     
     # --- Dashboard Header ---
     st.title("🤖 Smart LMS Proactive Assistant")
-    st.caption(f"Welcome, **{{st.session_state.get('username', 'Student')}}**. LMS: {{LMS_NAME}}")
+    st.caption(f"Welcome, **{st.session_state.get('username', 'Student')}**. LMS: {LMS_NAME}")
     st.write("---")
 
     # --- Attendance Calculation Logic ---
@@ -133,3 +129,86 @@ def display_dashboard():
             return '🟡 UPCOMING (Within 7 Days)'
         else:
             return '🟢 SAFE (Plenty of Time)'
+    
+    df_assignments['Alert_Category'] = df_assignments.apply(set_alert_category, axis=1)
+    reminder_alerts = df_assignments[
+        (df_assignments['Alert_Category'] != '✅ COMPLETED') &
+        (df_assignments['Alert_Category'] != '🟢 SAFE (Plenty of Time)')
+    ].sort_values(by='Days_Remaining')
+
+    # 4. GUI DISPLAY
+    st.header("1. 📉 ML Performance Risk Analysis")
+    if "HIGH RISK" in RISK_PREDICTION:
+        st.error(f"**{RISK_PREDICTION}**")
+        st.write(f"**Advice:** {RISK_DETAIL}")
+    else:
+        st.success(f"**{RISK_PREDICTION}**")
+        st.write(f"**Detail:** {RISK_DETAIL}")
+    st.write("---")
+
+    st.header("2. ⚠️ Attendance Shortfall Warnings")
+    if not shortfall_alerts.empty:
+        st.error(f"🔴 Immediate Action! {len(shortfall_alerts)} courses are below the required {int(REQUIRED_ATTENDANCE*100)}%.")
+        display_cols = ['Course_Code', 'Attended', 'Total_Classes', 'Attendance_Pct_Display', 'Classes_Needed']
+        # Rename columns for clear display on the dashboard
+        shortfall_alerts_display = shortfall_alerts[display_cols].rename(columns={
+            'Course_Code': 'Course','Attended': 'Attended','Total_Classes': 'Total Classes',
+            'Attendance_Pct_Display': 'Percentage (%)','Classes_Needed': 'Classes Needed to be Safe'
+        })
+        st.dataframe(shortfall_alerts_display, hide_index=True, use_container_width=True)
+    else:
+        st.success("✅ Good News! Your attendance is safe in all courses.")
+    st.write("---")
+
+    st.header("3. 🔔 Upcoming Assignment & Quiz Reminders")
+    if not reminder_alerts.empty:
+        st.warning(f"🔔 {len(reminder_alerts)} items are due in the next {ALERT_WINDOW_DAYS} days or are overdue.")
+        reminder_display = reminder_alerts[['Course_Code', 'Item_Title', 'Due_Date', 'Days_Remaining', 'Alert_Category']].copy()
+        
+        # Format the remaining days into a readable string
+        def format_days(days):
+            if days < 0:
+                return f"{abs(days)} days ago (OVERDUE)"
+            elif days == 0:
+                return "Today (URGENT)"
+            else:
+                return f"{days} days remaining"
+                
+        reminder_display['Days Remaining'] = reminder_display['Days_Remaining'].apply(format_days)
+        
+        # Rename columns and select final display columns
+        st.dataframe(reminder_display.rename(columns={
+            'Course_Code': 'Course', 'Item_Title': 'Title', 'Due_Date': 'Due Date', 'Alert_Category': 'Status',
+        })[['Course', 'Title', 'Due Date', 'Days Remaining', 'Status']], hide_index=True, use_container_width=True)
+    else:
+        st.info("🟢 No pending items in the immediate future.")
+    st.write("---")
+
+    # Logout button in the sidebar
+    if st.sidebar.button("Logout"):
+        st.session_state['logged_in'] = False
+        st.session_state['username'] = ''
+        st.rerun()
+
+def app():
+    st.set_page_config(layout="wide")
+    
+    # Initialize session state for login status if it doesn't exist
+    if 'logged_in' not in st.session_state:
+        st.session_state['logged_in'] = False
+        st.session_state['username'] = ''
+
+    # Main routing logic: show dashboard if logged in, otherwise show login form
+    if st.session_state['logged_in']:
+        display_dashboard()
+    else:
+        login_form()
+
+if __name__ == "__main__":
+    app()
+"""
+
+# Write the Streamlit App Code file
+with open(streamlit_script_name, "w", encoding='utf-8') as f:
+    f.write(streamlit_app_code)
+print(f"Final Streamlit app code with Login feature saved as: {streamlit_script_name}")
