@@ -135,7 +135,7 @@ def app():
     if not shortfall_alerts.empty:
         st.error(f"🔴 ACTION REQUIRED! {len(shortfall_alerts)} course(s) are below the {int(REQUIRED_ATTENDANCE*100)}% attendance threshold.")
         display_cols = ['Course_Code', 'Attended', 'Total_Classes', 'Attendance_Pct_Display', 'Classes_Needed']
-        shortfall_alerts_display = shortfall_alerts[display_cols].rename(columns={'Course_Code': 'کورس','Attended': 'حاضری','Total_Classes': 'کل کلاسز','Attendance_Pct_Display': 'فیصد (%)','Classes_Needed': 'مطلوبہ کلاسیں'})
+        shortfall_alerts_display = shortfall_alerts[display_cols].rename(columns={'Course_Code': 'Course','Attended': 'Attandence','Total_Classes': 'Total classes','Attendance_Pct_Display': 'Percentage','Classes_Needed': 'Required Classes'})
         st.dataframe(shortfall_alerts_display, hide_index=True, use_container_width=True)
     else:
         st.success("✅ Good News! Your attendance is SAFE in all courses.")
@@ -153,9 +153,11 @@ def app():
             elif days == 0:
                 return "آج (URGENT)"
             else:
-                return f"{days} دن باقی"
-        reminder_display['ڈیڈ لائن باقی'] = reminder_display['Days_Remaining'].apply(format_days)
-        st.dataframe(reminder_display.rename(columns={'Course_Code': 'کورس','Item_Title': 'عنوان','Due_Date': 'ڈیڈ لائن','Alert_Category': 'سٹیٹس',})[['کورس', 'عنوان', 'ڈیڈ لائن', 'ڈیڈ لائن باقی', 'سٹیٹس']], hide_index=True, use_container_width=True)
+                return f"{days} Remaining Days"
+      
+reminder_display['Days Remaining'] = reminder_display['Days_Remaining'].apply(format_days)
+st.dataframe(reminder_display.rename(columns={'Course_Code': 'Course','Item_Title': 'Title','Due_Date': 'Due Date','Alert_Category': 'Status',})[['Course', 'Title', 'Due Date', 'Days Remaining', 'Status']], hide_index=True, use_container_width=True)
+
     else:
         st.info("🟢 Zero pending items in the immediate future.")
     st.write("---")
@@ -163,3 +165,4 @@ def app():
 
 if __name__ == "__main__":
     app()
+
