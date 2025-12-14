@@ -1,5 +1,5 @@
 # ===================================================
-# FINAL STREAMLIT CODE WITH SECURE BCRYPT LOGIN (CLEANED)
+# FINAL STREAMLIT CODE WITH SIMPLE LOGIN (NO BCRYPT)
 # ===================================================
 
 streamlit_script_name = "streamlit_app.py"
@@ -11,7 +11,7 @@ import datetime
 import numpy as np
 import joblib
 import os
-import bcrypt # IMPORTANT: The secure hashing library
+# import bcrypt # NOTE: BCRYPT IS REMOVED FOR SIMPLICITY
 
 # --- Global Constants ---
 REQUIRED_ATTENDANCE = 0.75 # The minimum required attendance percentage
@@ -20,11 +20,9 @@ today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=
 USER = "Urooj Hameed" # Placeholder for the logged-in user's name
 LMS_NAME = "Virtual Learning Portal"
 
-# SECURE PASSWORD STORAGE: Hashed version of '12345'
-# This is how we securely store passwords instead of plain text.
-# NOTE: The b' prefix means this is a 'bytes' object, required by bcrypt.
-HASHED_PASSWORD = b'$2b$12$R94Y7YQ5R2S6M4X7X8A6Z2I8P2U.c7h8S6O9V3U4W7F1E1T0L5G4J6' 
-VALID_USERS = {"Urooj Hameed": HASHED_PASSWORD} # Dictionary storing username and hash
+# SIMPLE PASSWORD STORAGE: (For testing purposes only)
+VALID_PASSWORD = "12345" 
+VALID_USERS = {"Urooj Hameed": VALID_PASSWORD} # Dictionary storing username and simple password
 
 # 1. ML Prediction Logic 
 def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
@@ -56,38 +54,24 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
 
     return RISK_STATUS, RISK_MESSAGE
 
-# 2. Login Logic (Cleaned up and secured)
+# 2. Login Logic (Simple, non-secure string check)
 def login_form():
     st.sidebar.title("🔐 LMS Login")
     username = st.sidebar.text_input("User ID (Urooj Hameed)")
-    # Get the password input as plain text
     password_input = st.sidebar.text_input("Password (12345)", type="password")
     
     if st.sidebar.button("Login"):
-        # ⚠️ Check 1: Ensure both fields are filled
+        # Check 1: Ensure both fields are filled
         if not username or not password_input:
             st.sidebar.error("Please enter both User ID and Password.")
             return
             
-        if username in VALID_USERS:
-            try:
-                # 1. Encode the input password to bytes (required by bcrypt)
-                password_bytes = password_input.encode('utf-8')
-                # 2. Retrieve the stored hash
-                stored_hash = VALID_USERS[username]
-                
-                # 3. Securely compare the input password with the hash
-                if bcrypt.checkpw(password_bytes, stored_hash):
-                    st.session_state['logged_in'] = True
-                    st.session_state['username'] = username
-                    st.rerun() # Re-run the app to switch to the dashboard view
-                else:
-                    st.sidebar.error("Incorrect User ID or Password. Please try again.")
-            except Exception:
-                # Catch potential errors like corrupted hash (which caused the last error)
-                st.sidebar.error("An unexpected error occurred during login verification. Check HASH.")
+        # Check 2: Simple User ID and Password check
+        if username in VALID_USERS and VALID_USERS[username] == password_input:
+            st.session_state['logged_in'] = True
+            st.session_state['username'] = username
+            st.rerun() # Re-run the app to switch to the dashboard view
         else:
-            # User is not in VALID_USERS dictionary
             st.sidebar.error("Incorrect User ID or Password. Please try again.")
 
 
@@ -226,4 +210,4 @@ if __name__ == "__main__":
 # Write the Streamlit App Code file
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
-print(f"Final Streamlit app code with BCRYPT Login feature saved as: {streamlit_script_name}")
+print(f"Final Streamlit app code with simple login saved as: {streamlit_script_name}")
