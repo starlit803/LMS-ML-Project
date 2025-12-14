@@ -54,7 +54,7 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
 
     return RISK_STATUS, RISK_MESSAGE
 
-# 2. Login Logic (Updated to use bcrypt for secure password checking)
+# 2. Login Logic (Updated to handle empty password input securely)
 def login_form():
     st.sidebar.title("🔐 LMS Login")
     username = st.sidebar.text_input("User ID (Urooj Hameed)")
@@ -62,11 +62,30 @@ def login_form():
     password_input = st.sidebar.text_input("Password (12345)", type="password")
     
     if st.sidebar.button("Login"):
+        # ⚠️ NEW CHECK ADDED HERE ⚠️
+        if not username or not password_input:
+            st.sidebar.error("Please enter both User ID and Password.")
+            return
+            
         if username in VALID_USERS:
-            # 1. Encode the input password to bytes (required by bcrypt)
-            password_bytes = password_input.encode('utf-8')
-            # 2. Retrieve the stored hash
-            stored_hash = VALID_USERS[username]
+            try:
+                # 1. Encode the input password to bytes (required by bcrypt)
+                password_bytes = password_input.encode('utf-8')
+                # 2. Retrieve the stored hash
+                stored_hash = VALID_USERS[username]
+                
+                # 3. Use bcrypt.checkpw to securely compare the input password with the hash
+                if bcrypt.checkpw(password_bytes, stored_hash):
+                    st.session_state['logged_in'] = True
+                    st.session_state['username'] = username
+                    st.rerun() # Re-run the app to switch to the dashboard view
+                else:
+                    st.sidebar.error("Incorrect User ID or Password. Please try again.")
+            except Exception:
+                # Catch other potential bcrypt errors (though rare if everything is set up)
+                st.sidebar.error("An unexpected error occurred during login verification.")
+        else:
+            st.sidebar.error("Incorrect User ID or Password. Please try again.")
             
             # 3. Use bcrypt.checkpw to securely compare the input password with the hash
             if bcrypt.checkpw(password_bytes, stored_hash):
@@ -212,4 +231,5 @@ if __name__ == "__main__":
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
 print(f"Final Streamlit app code with BCRYPT Login feature saved as: {streamlit_script_name}")
+
 
