@@ -1,5 +1,5 @@
 # ===================================================
-# FINAL STREAMLIT CODE WITH SIMPLE LOGIN (NO BCRYPT)
+# FINAL STREAMLIT CODE WITH SIMPLE LOGIN 
 # ===================================================
 
 streamlit_script_name = "streamlit_app.py"
@@ -211,3 +211,4 @@ if __name__ == "__main__":
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
 print(f"Final Streamlit app code with simple login saved as: {streamlit_script_name}")
+
