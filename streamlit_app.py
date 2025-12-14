@@ -94,8 +94,7 @@ def login_form():
                 st.rerun() # Re-run the app to switch to the dashboard view
             else:
                 st.sidebar.error("Incorrect User ID or Password. Please try again.")
-        else:
-            st.sidebar.error("Incorrect User ID or Password. Please try again.")
+       
 
 # 3. Dashboard Display Logic (Remains unchanged)
 def display_dashboard():
@@ -231,5 +230,6 @@ if __name__ == "__main__":
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
 print(f"Final Streamlit app code with BCRYPT Login feature saved as: {streamlit_script_name}")
+
 
 
