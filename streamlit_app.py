@@ -1,5 +1,5 @@
 # ===================================================
-# CELL 4: FINAL STREAMLIT CODE WITH SECURE BCRYPT LOGIN
+# FINAL STREAMLIT CODE WITH SECURE BCRYPT LOGIN (CLEANED)
 # ===================================================
 
 streamlit_script_name = "streamlit_app.py"
@@ -22,16 +22,18 @@ LMS_NAME = "Virtual Learning Portal"
 
 # SECURE PASSWORD STORAGE: Hashed version of '12345'
 # This is how we securely store passwords instead of plain text.
+# NOTE: The b' prefix means this is a 'bytes' object, required by bcrypt.
 HASHED_PASSWORD = b'$2b$12$R94Y7YQ5R2S6M4X7X8A6Z2I8P2U.c7h8S6O9V3U4W7F1E1T0L5G4J6' 
 VALID_USERS = {"Urooj Hameed": HASHED_PASSWORD} # Dictionary storing username and hash
 
-# 1. ML Prediction Logic (Remains unchanged)
+# 1. ML Prediction Logic 
 def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
     MODEL_FILE = 'performance_predictor.pkl'
     try:
         loaded_model = joblib.load(MODEL_FILE)
     except FileNotFoundError:
-        return "N/A", "Model file not found. Please run ML training cells first."
+        # If model is missing, stop the prediction process gracefully
+        return "N/A", "Model file not found. Please ensure 'performance_predictor.pkl' exists."
 
     df_current = pd.DataFrame({
         'Attendance_Pct': [attendance_pct],
@@ -54,15 +56,15 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
 
     return RISK_STATUS, RISK_MESSAGE
 
-# 2. Login Logic (Updated to handle empty password input securely)
+# 2. Login Logic (Cleaned up and secured)
 def login_form():
     st.sidebar.title("🔐 LMS Login")
     username = st.sidebar.text_input("User ID (Urooj Hameed)")
-    # We get the password input as plain text
+    # Get the password input as plain text
     password_input = st.sidebar.text_input("Password (12345)", type="password")
     
     if st.sidebar.button("Login"):
-        # ⚠️ NEW CHECK ADDED HERE ⚠️
+        # ⚠️ Check 1: Ensure both fields are filled
         if not username or not password_input:
             st.sidebar.error("Please enter both User ID and Password.")
             return
@@ -74,7 +76,7 @@ def login_form():
                 # 2. Retrieve the stored hash
                 stored_hash = VALID_USERS[username]
                 
-                # 3. Use bcrypt.checkpw to securely compare the input password with the hash
+                # 3. Securely compare the input password with the hash
                 if bcrypt.checkpw(password_bytes, stored_hash):
                     st.session_state['logged_in'] = True
                     st.session_state['username'] = username
@@ -82,28 +84,23 @@ def login_form():
                 else:
                     st.sidebar.error("Incorrect User ID or Password. Please try again.")
             except Exception:
-                # Catch other potential bcrypt errors (though rare if everything is set up)
-                st.sidebar.error("An unexpected error occurred during login verification.")
+                # Catch potential errors like corrupted hash (which caused the last error)
+                st.sidebar.error("An unexpected error occurred during login verification. Check HASH.")
         else:
+            # User is not in VALID_USERS dictionary
             st.sidebar.error("Incorrect User ID or Password. Please try again.")
-            
-            # 3. Use bcrypt.checkpw to securely compare the input password with the hash
-            if bcrypt.checkpw(password_bytes, stored_hash):
-                st.session_state['logged_in'] = True
-                st.session_state['username'] = username
-                st.rerun() # Re-run the app to switch to the dashboard view
-            else:
-                st.sidebar.error("Incorrect User ID or Password. Please try again.")
-       
+
 
 # 3. Dashboard Display Logic (Remains unchanged)
 def display_dashboard():
     try:
+        # 1. Data Loading
         df_attendance = pd.read_csv('attendance_data.csv')
         df_assignments = pd.read_csv('assignments_data.csv')
         df_assignments['Due_Date'] = pd.to_datetime(df_assignments['Due_Date'])
         df_risk_input = pd.read_csv('student_risk_data.csv')
 
+        # 2. ML Prediction
         RISK_PREDICTION, RISK_DETAIL = get_ml_risk(
             attendance_pct=df_risk_input['Attendance_Pct'][0],
             quiz_avg=df_risk_input['Quiz_Avg'][0],
@@ -230,6 +227,3 @@ if __name__ == "__main__":
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
 print(f"Final Streamlit app code with BCRYPT Login feature saved as: {streamlit_script_name}")
-
-
-
