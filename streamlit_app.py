@@ -40,6 +40,15 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
         'Study_Hours': [study_hours]
     })
 
+    def send_proactive_alert(student_id):
+
+    alert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    ا
+    db.record_alert(student_id, alert_time, "Low Attendance")
+    
+    print(f"Alert sent to Student {student_id} at {alert_time}")
+
     prediction = loaded_model.predict(df_current)[0]
     probabilities = loaded_model.predict_proba(df_current)[0]
     fail_risk_pct = probabilities[0] * 100
@@ -211,4 +220,5 @@ if __name__ == "__main__":
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
 print(f"Final Streamlit app code with simple login saved as: {streamlit_script_name}")
+
 
