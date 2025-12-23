@@ -1,24 +1,19 @@
 # ===================================================
-# FINAL STREAMLIT CODE WITH SIMPLE LOGIN (ERROR-FREE)
+# FINAL STREAMLIT CODE WITH SIMPLE LOGIN (Date Fix Included)
 # ===================================================
 
-streamlit_script_name = "streamlit_app.py"
-
-streamlit_app_code = """
 import streamlit as st
 import pandas as pd
 import datetime
 import numpy as np
 import joblib
 import os
-# import bcrypt # NOTE: BCRYPT IS REMOVED FOR SIMPLICITY
 
 # --- Global Constants ---
 REQUIRED_ATTENDANCE = 0.75 # The minimum required attendance percentage
 ALERT_WINDOW_DAYS = 7 # The number of days for 'upcoming' assignment alerts
-# Use datetime.datetime to ensure it is correctly imported
+# Set today's date to midnight for consistent comparison
 today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) 
-USER = "Urooj Hameed" # Placeholder for the logged-in user's name
 LMS_NAME = "Virtual Learning Portal"
 
 # SIMPLE PASSWORD STORAGE: (For testing purposes only)
@@ -29,9 +24,9 @@ VALID_USERS = {"Urooj Hameed": VALID_PASSWORD} # Dictionary storing username and
 def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
     MODEL_FILE = 'performance_predictor.pkl'
     try:
+        # Load the model (Ensure 'performance_predictor.pkl' exists)
         loaded_model = joblib.load(MODEL_FILE)
     except FileNotFoundError:
-        # If model is missing, stop the prediction process gracefully
         return "N/A", "Model file not found. Please ensure 'performance_predictor.pkl' exists."
 
     df_current = pd.DataFrame({
@@ -40,9 +35,6 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
         'Assignment_Avg': [assignment_avg],
         'Study_Hours': [study_hours]
     })
-    
-    # NOTE: The extra code block (send_proactive_alert, db.record_alert, and unknown character 'ا') 
-    # has been removed as it was causing Syntax and Name Errors.
 
     prediction = loaded_model.predict(df_current)[0]
     probabilities = loaded_model.predict_proba(df_current)[0]
@@ -97,7 +89,6 @@ def display_dashboard():
         )
 
     except Exception as exc:
-        # Improved error message to help debug file issues
         st.error(f"⚠️ Data Loading or ML Error: {exc}. Please check if all CSVs and the PKL model file exist.")
         st.stop()
     
@@ -122,18 +113,22 @@ def display_dashboard():
     
     shortfall_alerts = df_attendance[df_attendance['Shortfall_Status'] == '⚠️ SHORTFALL']
     
-    # --- Assignment Calculation Logic ---
+    # --- Assignment Calculation Logic (Date Fix Applied) ---
     df_assignments['Days_Remaining'] = (df_assignments['Due_Date'] - today).dt.days
     
     def set_alert_category(row):
         if row['Status'] == 'Submitted':
             return '✅ COMPLETED'
+        
         days = row['Days_Remaining']
-        if days < 0:
+        # Adding 1 day buffer: If days_remaining is 0 (due today), days_with_buffer is 1, so it's not overdue.
+        days_with_buffer = days + 1 
+        
+        if days_with_buffer <= 0:
             return '❌ OVERDUE'
-        elif days == 0 or days <= 2:
+        elif days_with_buffer <= 2:
             return '🔴 URGENT (Due Today/Tomorrow)'
-        elif days <= ALERT_WINDOW_DAYS:
+        elif days_with_buffer <= ALERT_WINDOW_DAYS:
             return '🟡 UPCOMING (Within 7 Days)'
         else:
             return '🟢 SAFE (Plenty of Time)'
@@ -210,9 +205,3 @@ def app():
 
 if __name__ == "__main__":
     app()
-"""
-
-# Write the Streamlit App Code file
-with open(streamlit_script_name, "w", encoding='utf-8') as f:
-    f.write(streamlit_app_code)
-print(f"Final Streamlit app code with simple login saved as: {streamlit_script_name}")
