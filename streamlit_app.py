@@ -1,5 +1,5 @@
 # ===================================================
-# FINAL STREAMLIT CODE WITH SIMPLE LOGIN 
+# FINAL STREAMLIT CODE WITH SIMPLE LOGIN (ERROR-FREE)
 # ===================================================
 
 streamlit_script_name = "streamlit_app.py"
@@ -16,7 +16,8 @@ import os
 # --- Global Constants ---
 REQUIRED_ATTENDANCE = 0.75 # The minimum required attendance percentage
 ALERT_WINDOW_DAYS = 7 # The number of days for 'upcoming' assignment alerts
-today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+# Use datetime.datetime to ensure it is correctly imported
+today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) 
 USER = "Urooj Hameed" # Placeholder for the logged-in user's name
 LMS_NAME = "Virtual Learning Portal"
 
@@ -39,15 +40,9 @@ def get_ml_risk(attendance_pct, quiz_avg, assignment_avg, study_hours):
         'Assignment_Avg': [assignment_avg],
         'Study_Hours': [study_hours]
     })
-
-    def send_proactive_alert(student_id):
-
-    alert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    ا
-    db.record_alert(student_id, alert_time, "Low Attendance")
-    
-    print(f"Alert sent to Student {student_id} at {alert_time}")
+    # NOTE: The extra code block (send_proactive_alert, db.record_alert, and unknown character 'ا') 
+    # has been removed as it was causing Syntax and Name Errors.
 
     prediction = loaded_model.predict(df_current)[0]
     probabilities = loaded_model.predict_proba(df_current)[0]
@@ -84,7 +79,7 @@ def login_form():
             st.sidebar.error("Incorrect User ID or Password. Please try again.")
 
 
-# 3. Dashboard Display Logic (Remains unchanged)
+# 3. Dashboard Display Logic
 def display_dashboard():
     try:
         # 1. Data Loading
@@ -102,7 +97,8 @@ def display_dashboard():
         )
 
     except Exception as exc:
-        st.error(f"⚠️ Data Loading or ML Error: {exc}")
+        # Improved error message to help debug file issues
+        st.error(f"⚠️ Data Loading or ML Error: {exc}. Please check if all CSVs and the PKL model file exist.")
         st.stop()
     
     # --- Dashboard Header ---
@@ -220,5 +216,3 @@ if __name__ == "__main__":
 with open(streamlit_script_name, "w", encoding='utf-8') as f:
     f.write(streamlit_app_code)
 print(f"Final Streamlit app code with simple login saved as: {streamlit_script_name}")
-
-
